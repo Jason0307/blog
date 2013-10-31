@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:security="http://www.springframework.org/schema/security"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+      http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd
+      http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.1.xsd
+      http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.1.xsd
+      http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.1.xsd">
+	<context:component-scan base-package="org.zhubao">
+		<context:exclude-filter type="annotation"
+			expression="org.springframework.stereotype.Controller" />
+	</context:component-scan>
+    <context:annotation-config />
+    
+    <!-- spring security config -->
+   <!--  
+    <security:global-method-security pre-post-annotations="enabled"></security:global-method-security>
+	<security:http pattern="/login" security="none"/>
+	<security:http pattern="/css/**" security="none"/>
+	<security:http pattern="/js/**" security="none"/>
+	<security:http pattern="/img/**" security="none"/>
+	<security:http pattern="/ico/**" security="none"/>
+	<security:http pattern="/swf/**" security="none"/>
+	<security:http auto-config="true">
+	  <security:form-login login-page="/WEB-INF/jsp/login.jsp"/>
+	  <security:intercept-url pattern="/**" access="ROLE_USER"/>
+	</security:http>
+	<security:http use-expressions="true" auto-config="true">  
+        <security:form-login />  
+        <security:logout/>  
+        <security:remember-me />  
+        <security:session-management invalid-session-url="/timeout.jsp">  
+            <security:concurrency-control max-sessions="10" error-if-maximum-exceeded="true" />  
+        </security:session-management>  
+        <security:custom-filter ref="myFilter" before="FILTER_SECURITY_INTERCEPTOR"/>  
+    </security:http> 
+	<security:authentication-manager>
+	 <security:authentication-provider>
+	 <security:user-service>
+	  <security:user name="jasonzhu" password="123456" authorities="ROLE_USER"/>
+	 </security:user-service>
+	 
+	 </security:authentication-provider>
+	
+	</security:authentication-manager>-->
+	<!-- 导入配置文件 -->
+	<bean id="propertyConfigurer"
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations">
+			<list>
+				<value>classpath:config.properties</value>
+			</list>
+		</property>
+	</bean>
+	<!-- 数据源配置 -->
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource"
+		destroy-method="close">
+		<property name="driverClassName" value="${jdbc.driverClassName}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+	</bean>
+
+
+	<bean id="sessionFactory"
+		class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+		<property name="dataSource">
+			<ref local="dataSource" />
+		</property>
+		<property name="packagesToScan">
+			<list>
+				<value>org.zhubao.model</value>
+
+			</list>
+		</property>
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">
+					org.hibernate.dialect.MySQLDialect
+				</prop>
+				<prop key="hibernate.show_sql">true</prop>
+				<prop key="hibernate.format_sql">true</prop>
+				<prop key="hibernate.current_session_context_class">org.springframework.orm.hibernate4.SpringSessionContext  
+                </prop> 
+			</props>
+		</property>
+	</bean>
+	 <bean id="targetConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
+		<property name="brokerURL" value="tcp://localhost:61616" />
+	</bean>
+	<bean id="connectionFactory"
+		class="org.springframework.jms.connection.SingleConnectionFactory">
+		<property name="targetConnectionFactory" ref="targetConnectionFactory" />
+	</bean>
+	<bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
+		<property name="connectionFactory" ref="connectionFactory" />
+	</bean>
+	<bean id="queueDestination" class="org.apache.activemq.command.ActiveMQQueue">
+		<constructor-arg>
+			<value>queue</value>
+		</constructor-arg>
+	</bean>
+	<bean id="consumerMessageListener"
+		class="org.zhubao.listener.ConsumerMessageListener" />
+	<bean id="jmsContainer"
+		class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+		<property name="connectionFactory" ref="connectionFactory" />
+		<property name="destination" ref="queueDestination" />
+		<property name="messageListener" ref="consumerMessageListener" />
+	</bean>
+	<aop:aspectj-autoproxy />
+ 	<bean id="txManager"  class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+  		<property name="sessionFactory" ref="sessionFactory" />
+ 	</bean>
+	<tx:annotation-driven transaction-manager="txManager" proxy-target-class="true"/>
+	<tx:advice id="txAdvice" transaction-manager="txManager">
+        <tx:attributes>
+            <tx:method name="save*" propagation="REQUIRED" />
+            <tx:method name="add*" propagation="REQUIRED" />
+            <tx:method name="create*" propagation="REQUIRED" />
+            <tx:method name="insert*" propagation="REQUIRED" />
+            <tx:method name="update*" propagation="REQUIRED" />
+            <tx:method name="merge*" propagation="REQUIRED" />
+            <tx:method name="del*" propagation="REQUIRED" />
+            <tx:method name="remove*" propagation="REQUIRED" />
+            <tx:method name="put*" propagation="REQUIRED" />
+            <tx:method name="use*" propagation="REQUIRED"/>
+            <tx:method name="get*" propagation="REQUIRED" read-only="true" />
+            <tx:method name="count*" propagation="REQUIRED" read-only="true" />
+            <tx:method name="find*" propagation="REQUIRED" read-only="true" />
+            <tx:method name="list*" propagation="REQUIRED" read-only="true" />
+            <tx:method name="*" read-only="true" />
+        </tx:attributes>
+    </tx:advice>
+    <aop:config expose-proxy="true">
+        <aop:pointcut id="txPointcut" expression="execution(* org.zhubao..dao..*.*(..))" />
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="txPointcut"/>
+    </aop:config>
+
+</beans>
