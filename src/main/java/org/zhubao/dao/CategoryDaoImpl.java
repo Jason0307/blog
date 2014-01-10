@@ -3,6 +3,8 @@
  */
 package org.zhubao.dao;
 
+import javax.annotation.PostConstruct;
+
 import org.springframework.stereotype.Repository;
 import org.zhubao.model.Category;
 
@@ -14,4 +16,9 @@ import org.zhubao.model.Category;
 @Repository
 public class CategoryDaoImpl extends BaseDaoImpl<Category> implements CategoryDao{
 
+	@PostConstruct
+	public void init(){
+		
+		System.out.println("1234");
+	}
 }
